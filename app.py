@@ -2,77 +2,102 @@ import streamlit as st
 import joblib
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-from tensorflow.keras.models import load_model
+import torch
+import torch.nn as nn
+import torchvision.transforms as transforms
 from PIL import Image
-import io
 
-# โหลดโมเดลที่บันทึกไว้
+# ✅ โหลดโมเดล Titanic (ใช้ Scikit-learn)
 titanic_model = joblib.load("models/titanic_model.pkl")
-mnist_model = load_model("models/mnist_model.h5", compile=False)
 
-# ตั้งค่า Sidebar Navigation
+# ✅ โหลดโมเดล MNIST (ใช้ PyTorch CNN)
+class CNN(nn.Module):
+    def __init__(self):
+        super(CNN, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(64 * 7 * 7, 128)
+        self.fc2 = nn.Linear(128, 10)
+
+    def forward(self, x):
+        x = self.pool(torch.relu(self.conv1(x)))
+        x = self.pool(torch.relu(self.conv2(x)))
+        x = self.flatten(x)
+        x = torch.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+device = torch.device("cpu")
+mnist_model = CNN()
+mnist_model.load_state_dict(torch.load("models/mnist_cnn.pth", map_location=device))
+mnist_model.eval()
+
+# ✅ ตั้งค่า UI
+st.set_page_config(page_title="AI Prediction Web App", page_icon="🤖", layout="wide")
+
 st.sidebar.title("🔍 AI Prediction Web App")
-page = st.sidebar.radio("เลือกหน้า", ["🏠 หน้าแรก", "📘 About Machine Learning", "📘 About Neural Network", "📊 Machine Learning Demo", "🤖 Neural Network Demo"])
+page = st.sidebar.radio(
+    "เลือกหน้า",
+    ["🏠 หน้าแรก", "📘 About Machine Learning", "📘 About Neural Network", "📊 ML Demo (Titanic)", "🤖 NN Demo (MNIST)"]
+)
 
 # -------------- หน้าแรก --------------
 if page == "🏠 หน้าแรก":
-    st.markdown("<h1 style='text-align: center; color: #ff4b4b;'>🤖 AI Prediction Web App & Demo</h1>", unsafe_allow_html=True)
-    st.write("เลือกฟังก์ชันที่คุณต้องการจากปุ่มด้านล่าง")
-
-    col1, col2 = st.columns(2)
+    st.markdown("<h1 style='text-align: center; color: #ff4b4b;'>🤖 AI Prediction Web App</h1>", unsafe_allow_html=True)
+    st.write("เลือกฟังก์ชันที่ต้องการจาก Sidebar ด้านซ้าย")
     
-    with col1:
-        st.subheader("📘 About Machine Learning")
-        st.write("ศึกษาข้อมูลเกี่ยวกับ Machine Learning และ Titanic Dataset เรียนรู้กระบวนการพัฒนาโมเดลตั้งแต่การเตรียมข้อมูล, ทฤษฎีอัลกอริทึม, และการสร้างโมเดลคาดการณ์การรอดชีวิตของผู้โดยสารไททานิค")
+    
+    
+    
+    st.subheader("📘 About Machine Learning")
+    st.write("ศึกษาข้อมูลเกี่ยวกับ Machine Learning และ Titanic Dataset เรียนรู้กระบวนการพัฒนาโมเดลตั้งแต่การเตรียมข้อมูล, ทฤษฎีอัลกอริทึม, และการสร้างโมเดลคาดการณ์การรอดชีวิตของผู้โดยสารไททานิค")
+        
+    st.subheader("📊 Machine Learning Demo")
+    st.write("ทดลองใช้โมเดล Machine Learning ที่สร้างขึ้นจาก Random Forest, Logistic Regression, และ SVM ป้อนข้อมูลผู้โดยสารแล้วทำนายโอกาสรอดชีวิตจากอุบัติเหตุไททานิค")
+        
+    
+    st.subheader("📘 About Neural Network")
+    st.write("เรียนรู้เกี่ยวกับ Neural Networks และ Convolutional Neural Networks (CNN) ศึกษาการใช้ CNN ในการจำแนกภาพ เช่น การจดจำลายมือ หรือรูปแบบข้อมูลเชิงซ้อน")
         
 
-        st.subheader("📊 Machine Learning Demo")
-        st.write("ทดลองใช้โมเดล Machine Learning ที่สร้างขึ้นจาก Random Forest, Logistic Regression, และ SVM ป้อนข้อมูลผู้โดยสารแล้วทำนายโอกาสรอดชีวิตจากอุบัติเหตุไททานิค")
-        
-
-    with col2:
-        st.subheader("📘 About Neural Network")
-        st.write("เรียนรู้เกี่ยวกับ Neural Networks และ Convolutional Neural Networks (CNN) ศึกษาการใช้ CNN ในการจำแนกภาพ เช่น การจดจำลายมือ หรือรูปแบบข้อมูลเชิงซ้อน")
-        
-
-        st.subheader("🤖 Neural Network Demo")
-        st.write("ทดลองใช้งานโมเดล CNN ที่ผ่านการฝึกมาเพื่อจดจำตัวเลขจากชุดข้อมูล MNIST อัปโหลดภาพหรือลองป้อนข้อมูลเพื่อดูผลลัพธ์")
-        
+    st.subheader("🤖 Neural Network Demo")
+    st.write("ทดลองใช้งานโมเดล CNN ที่ผ่านการฝึกมาเพื่อจดจำตัวเลขจากชุดข้อมูล MNIST อัปโหลดภาพหรือลองป้อนข้อมูลเพื่อดูผลลัพธ์")
 
 # -------------- About Machine Learning --------------
 elif page == "📘 About Machine Learning":
-    st.markdown("<h1 style='color: #ff9900;'>📘 About Machine Learning & Titanic Dataset</h1>", unsafe_allow_html=True)
+    st.header("📘 About Machine Learning & Titanic Dataset")
     
     st.subheader("🔧 แนวทางการพัฒนา Machine Learning")
     st.write("""
     การพัฒนาโมเดล Machine Learning สำหรับ Titanic Dataset เป็นไปตามขั้นตอนหลักดังนี้:
     """)
 
-    st.markdown("### 📊 การเตรียมข้อมูล")
+    st.markdown("📊 การเตรียมข้อมูล")
     st.write("""
     - ลบค่าข้อมูลที่หายไป (Missing Values)
     - แปลงค่าข้อมูลประเภทหมวดหมู่เป็นตัวเลข (Categorical Encoding)
     - ทำการปรับขนาดค่าข้อมูล (Feature Scaling) เพื่อให้โมเดลเรียนรู้ได้ดีขึ้น
     """)
 
-    st.markdown("### 🧠 ทฤษฎีของอัลกอริทึม")
+    st.markdown("🧠 ทฤษฎีของอัลกอริทึม")
     st.write("""
     โมเดลที่ถูกนำมาใช้ในการเรียนรู้:
-    - **Random Forest**: ใช้การรวมผลจาก Decision Trees
-    - **Logistic Regression**: ใช้สำหรับปัญหาจำแนกประเภท (Classification)
-    - **Support Vector Machine (SVM)**: ใช้เส้น Hyperplane ในการแยกข้อมูล
+    - *Random Forest*: ใช้การรวมผลจาก Decision Trees
+    - *Logistic Regression*: ใช้สำหรับปัญหาจำแนกประเภท (Classification)
+    - *Support Vector Machine (SVM)*: ใช้เส้น Hyperplane ในการแยกข้อมูล
     """)
 
-    st.markdown("### 🏗️ ขั้นตอนการพัฒนาโมเดล")
+    st.markdown("🏗️ ขั้นตอนการพัฒนาโมเดล")
     st.write("""
     1. โหลดและทำความสะอาดข้อมูล Titanic Dataset
     2. ทำการวิเคราะห์ข้อมูล และเลือก Feature ที่สำคัญ
-    3. แบ่งชุดข้อมูลเป็น `Train/Test Split`
+    3. แบ่งชุดข้อมูลเป็น Train/Test Split
     4. เลือกอัลกอริทึมและฝึก Train โมเดล
     5. วิเคราะห์โมเดลโดยใช้ค่าต่างๆ เช่น Accuracy, Precision, Recall, และ F1-score
     """)
-
+    
     st.markdown("### 📂 Dataset: Titanic Survival")
     st.write("ชุดข้อมูลนี้ใช้ข้อมูลจากผู้โดยสาร Titanic และพยากรณ์ว่าผู้โดยสารรอดชีวิตหรือไม่")
 
@@ -103,7 +128,6 @@ elif page == "📘 About Machine Learning":
     - 📌 TensorFlow Guide 🔗 [TensorFlow Guide](https://www.tensorflow.org/)
     """)
 
-
 # -------------- About Neural Network --------------
 elif page == "📘 About Neural Network":
     st.markdown("<h1 style='color: #ff9900;'>📘 About Neural Network & MNIST Dataset</h1>", unsafe_allow_html=True)
@@ -122,11 +146,11 @@ elif page == "📘 About Neural Network":
 
     st.subheader("📌 ทฤษฎีของอัลกอริทึม")
     st.write("""
-    โมเดลที่ใช้คือ **Convolutional Neural Network (CNN)** ซึ่งเหมาะสำหรับการประมวลผลภาพ โดยมีชั้นสำคัญ เช่น:
-    - **Conv2D:** ใช้ฟิลเตอร์ดึงลักษณะเด่นของภาพ  
-    - **MaxPooling:** ลดขนาดภาพเพื่อลดพารามิเตอร์  
-    - **Flatten:** แปลงข้อมูลภาพเป็นเวกเตอร์  
-    - **Dense:** ใช้ Fully Connected Layer เชื่อมข้อมูลลักษณะ  
+    โมเดลที่ใช้คือ *Convolutional Neural Network (CNN)* ซึ่งเหมาะสำหรับการประมวลผลภาพ โดยมีชั้นสำคัญ เช่น:
+    - *Conv2D:* ใช้ฟิลเตอร์ดึงลักษณะเด่นของภาพ  
+    - *MaxPooling:* ลดขนาดภาพเพื่อลดพารามิเตอร์  
+    - *Flatten:* แปลงข้อมูลภาพเป็นเวกเตอร์  
+    - *Dense:* ใช้ Fully Connected Layer เชื่อมข้อมูลลักษณะ  
     """)
 
     st.subheader("⚙️ ขั้นตอนการพัฒนาโมเดล")
@@ -172,53 +196,43 @@ elif page == "📘 About Neural Network":
     - 📌 GitHub MNIST PNG Dataset: 🔗 [GitHub MNIST PNG Dataset](https://github.com/myleott/mnist_png)
     """)
 
-
 # -------------- Machine Learning Demo (Titanic) --------------
-elif page == "📊 Machine Learning Demo":
+elif page == "📊 ML Demo (Titanic)":
     st.title("🚢 Titanic Survival Prediction")
 
-    sex_dict = {"ชาย": 0, "หญิง": 1}
-    embarked_dict = {"Cherbourg (C)": 0, "Queenstown (Q)": 1, "Southampton (S)": 2}
-
     pclass = st.selectbox("Pclass (ชั้นโดยสาร)", [1, 2, 3])
-    sex = st.selectbox("Sex (เพศ)", list(sex_dict.keys()))
+    sex = st.selectbox("Sex (เพศ)", ["ชาย", "หญิง"])
     age = st.slider("Age (อายุ)", 0, 100, 30)
     sibsp = st.slider("SibSp (จำนวนพี่น้อง/คู่สมรส)", 0, 10, 0)
     parch = st.slider("Parch (จำนวนพ่อแม่/ลูก)", 0, 10, 0)
     fare = st.number_input("Fare (ค่าโดยสาร)", 0.0, 500.0, 50.0)
-    embarked = st.selectbox("Embarked (ท่าเรือขึ้นเรือ)", list(embarked_dict.keys()))
+    embarked = st.selectbox("Embarked (ท่าเรือขึ้นเรือ)", ["Cherbourg (C)", "Queenstown (Q)", "Southampton (S)"])
 
-    sex = sex_dict[sex]
-    embarked = embarked_dict[embarked]
-
-    feature_names = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"]
+    sex = 0 if sex == "ชาย" else 1
+    embarked = {"Cherbourg (C)": 0, "Queenstown (Q)": 1, "Southampton (S)": 2}[embarked]
 
     if st.button("🔍 ทำนายผล"):
-        input_data = pd.DataFrame([[pclass, sex, age, sibsp, parch, fare, embarked]], columns=feature_names)
+        input_data = np.array([[pclass, sex, age, sibsp, parch, fare, embarked]])
         prediction = titanic_model.predict(input_data)[0]
         result = "✅ รอดชีวิต" if prediction == 1 else "❌ ไม่รอดชีวิต"
         st.success(f"ผลลัพธ์: {result}")
 
 # -------------- Neural Network Demo (MNIST) --------------
-elif page == "🤖 Neural Network Demo":
+elif page == "🤖 NN Demo (MNIST)":
     st.title("🖼️ MNIST Handwritten Digit Recognition")
-    uploaded_file = st.file_uploader("อัปโหลดรูปภาพตัวเลข (0-9)", type=["png", "jpg", "jpeg"])
+
+    uploaded_file = st.file_uploader("📤 อัปโหลดภาพตัวเลข (0-9)", type=["png", "jpg", "jpeg"])
 
     if uploaded_file is not None:
         img = Image.open(uploaded_file).convert('L')
         img = img.resize((28, 28))
         img_array = np.array(img) / 255.0
-        img_array = img_array.reshape(1, 28, 28, 1)
+        img_tensor = torch.tensor(img_array, dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(device)
 
-        st.image(img, caption="ภาพที่อัปโหลด", width=150)
+        st.image(img, caption="📸 ภาพที่อัปโหลด", width=150)
 
         if st.button("🔍 ทำนายตัวเลข"):
-            prediction = mnist_model.predict(img_array)
-            predicted_digit = np.argmax(prediction)
-            st.success(f"โมเดลทำนายว่าเป็นเลข: {predicted_digit}")
-
-
-# ศึกษาข้อมูลเกี่ยวกับ Machine Learning และ Titanic Dataset เรียนรู้กระบวนการพัฒนาโมเดลตั้งแต่การเตรียมข้อมูล, ทฤษฎีอัลกอริทึม, และการสร้างโมเดลคาดการณ์การรอดชีวิตของผู้โดยสารไททานิค
-# ทดลองใช้โมเดล Machine Learning ที่สร้างขึ้นจาก Random Forest, Logistic Regression, และ SVM ป้อนข้อมูลผู้โดยสารแล้วทำนายโอกาสรอดชีวิตจากอุบัติเหตุไททานิค
-# เรียนรู้เกี่ยวกับ Neural Networks และ Convolutional Neural Networks (CNN) ศึกษาการใช้ CNN ในการจำแนกภาพ เช่น การจดจำลายมือ หรือรูปแบบข้อมูลเชิงซ้อน
-# ทดลองใช้งานโมเดล CNN ที่ผ่านการฝึกมาเพื่อจดจำตัวเลขจากชุดข้อมูล MNIST อัปโหลดภาพหรือลองป้อนข้อมูลเพื่อดูผลลัพธ์
+            with torch.no_grad():
+                prediction = mnist_model(img_tensor)
+                predicted_label = torch.argmax(prediction).item()
+            st.success(f"โมเดลทำนายว่าเป็นเลข: {predicted_label}")

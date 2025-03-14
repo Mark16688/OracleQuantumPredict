@@ -5,7 +5,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import cross_val_score
-from xgboost import XGBClassifier
 import joblib  # ใช้บันทึกโมเดล
 
 #โหลดข้อมูล Titanic (สามารถเปลี่ยนเป็นชุดข้อมูลอื่นได้)

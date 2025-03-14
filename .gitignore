@@ -2,6 +2,9 @@
 __pycache__/
 *.py[cod]
 *$py.class
+models/*.h5
+models/*.pkl
+.DS_Store
 
 # C extensions
 *.so
